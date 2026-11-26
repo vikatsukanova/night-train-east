@@ -57,7 +57,7 @@ export class TreadmillChunkManager {
 	readonly root = new Group();
 	private readonly instancedGroup = new Group();
 	private readonly routeSeed: number;
-	private readonly fogCutoffM: number;
+	private fogCutoffM: number;
 
 	// Pooled terrain meshes sharing one BufferGeometry and one Material.
 	private readonly terrainMeshes: Mesh[] = [];
@@ -230,7 +230,10 @@ export class TreadmillChunkManager {
 		if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
 	}
 
-	update(distanceM: number): void {
+	update(distanceM: number, fogCutoffM?: number): void {
+		if (fogCutoffM !== undefined && Number.isFinite(fogCutoffM)) {
+			this.fogCutoffM = fogCutoffM;
+		}
 		const needsRebase =
 			!this.initialized ||
 			Math.abs(distanceM - this.anchorM) >= REBASE_DISTANCE_M;
@@ -450,6 +453,10 @@ export class TreadmillChunkManager {
 
 	getVisibleChunkCount(): number {
 		return this.visibleChunks;
+	}
+
+	getChunkPoolSize(): number {
+		return RING_SIZE;
 	}
 
 	dispose(): void {

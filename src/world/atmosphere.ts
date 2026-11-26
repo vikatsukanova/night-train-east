@@ -5,18 +5,29 @@ import {
 	HemisphereLight,
 	type Scene,
 } from "three";
+import type { TimeOfDayState } from "../render/timeOfDay";
 
 export interface NightAtmosphere {
+	readonly fog: FogExp2;
 	readonly fogColor: Color;
-	readonly fogDensity: number;
-	readonly fogCutoffM: number;
+	fogDensity: number;
+	fogCutoffM: number;
 	readonly moonLight: DirectionalLight;
 	readonly skyFill: HemisphereLight;
+	applyTimeOfDay(tod: TimeOfDayState): number;
 }
 
-/** Deep midnight indigo fog colour tuned to docs/reference/m1-cozy-cabin.jpg & RENDERING §4.2. */
-export const NIGHT_FOG_COLOR_HEX = 0x0d1b30;
-export const NIGHT_FOG_DENSITY = 0.0085;
+/** Night M1 (22:45) fog values from docs/RENDERING.md §4.2. */
+export const NIGHT_FOG_COLOR_HEX = 0x112036;
+export const NIGHT_FOG_DENSITY = 0.0065;
+
+/** ~98% fog opacity threshold (transmittance = 0.02 => ~304 m at density 0.0065; RENDERING §3). */
+export const FOG_CUTOFF_TRANSMITTANCE = 0.02;
+
+const CELESTIAL_LIGHT_DISTANCE_M = 50;
+// Calibrates RENDERING §4.2 artistic light intensities for Three.js physical units under AgX.
+const DIRECTIONAL_PHYSICAL_SCALE = 2.4;
+const HEMI_PHYSICAL_SCALE = 1.5;
 
 /**
  * Distance at which Three.js FogExp2 reaches (1 - transmittanceThreshold) opacity:
@@ -24,35 +35,62 @@ export const NIGHT_FOG_DENSITY = 0.0085;
  */
 export function fogVisibilityDistance(
 	density: number,
-	transmittanceThreshold = 0.015,
+	transmittanceThreshold = FOG_CUTOFF_TRANSMITTANCE,
 ): number {
 	if (density <= 0) return Number.POSITIVE_INFINITY;
 	return Math.sqrt(-Math.log(transmittanceThreshold)) / density;
 }
 
 /**
- * Applies M1 night atmosphere (deep blue fog/background, cold moonlight directional + sky fill).
+ * Applies exterior atmosphere (FogExp2 synced to sky horizon, sun/moon directional + sky hemisphere fill)
+ * with dynamic Time-of-Day updates across dusk → night → dawn.
  */
 export function applyNightAtmosphere(scene: Scene): NightAtmosphere {
 	const fogColor = new Color(NIGHT_FOG_COLOR_HEX);
-	scene.background = fogColor;
-	scene.fog = new FogExp2(fogColor, NIGHT_FOG_DENSITY);
+	const fog = new FogExp2(fogColor, NIGHT_FOG_DENSITY);
+	scene.background = fog.color;
+	scene.fog = fog;
 
-	// Cold moonlight angled from high-left-ahead so the window-facing birch trunks catch
-	// bright silver-white moonlit edges while their far sides fall into deep indigo shadow.
-	const moonLight = new DirectionalLight(0x9bc4f7, 1.85);
-	moonLight.position.set(-34, 34, -22);
+	const moonLight = new DirectionalLight(
+		0x6b8fc7,
+		0.45 * DIRECTIONAL_PHYSICAL_SCALE,
+	);
+	moonLight.position.set(-34, 31, -21);
 
-	// Cool indigo sky & moonlit snow bounce fill so snowbanks stay luminous and spruces keep depth.
-	const skyFill = new HemisphereLight(0x3a5d94, 0x203554, 1.05);
+	const skyFill = new HemisphereLight(
+		0x1c3257,
+		0x152033,
+		0.55 * HEMI_PHYSICAL_SCALE,
+	);
 
 	scene.add(skyFill, moonLight);
 
-	return {
-		fogColor,
+	const state: NightAtmosphere = {
+		fog,
+		fogColor: fog.color,
 		fogDensity: NIGHT_FOG_DENSITY,
 		fogCutoffM: fogVisibilityDistance(NIGHT_FOG_DENSITY),
 		moonLight,
 		skyFill,
+		applyTimeOfDay(tod: TimeOfDayState): number {
+			fog.color.copy(tod.fogColor);
+			fog.density = tod.fogDensity;
+			state.fogDensity = tod.fogDensity;
+			state.fogCutoffM = fogVisibilityDistance(tod.fogDensity);
+
+			moonLight.color.copy(tod.celestialColor);
+			moonLight.intensity = tod.celestialIntensity * DIRECTIONAL_PHYSICAL_SCALE;
+			moonLight.position
+				.copy(tod.celestialDir)
+				.multiplyScalar(CELESTIAL_LIGHT_DISTANCE_M);
+
+			skyFill.color.copy(tod.hemiSky);
+			skyFill.groundColor.copy(tod.hemiGround);
+			skyFill.intensity = tod.hemiIntensity * HEMI_PHYSICAL_SCALE;
+
+			return state.fogCutoffM;
+		},
 	};
+
+	return state;
 }
