@@ -273,7 +273,7 @@ interface SaveV1 {
 | D4 | **Third-person** camera with collision + window-view framing | First-person | Accepted (owner decision) |
 | D5 | No dialogue in MVP; authored Ink dialogue in v0.2 | Yarn Spinner, custom JSON, LLM chat | Accepted (owner decision) |
 | D6 | No physics engine; 2-D walkable polygons | Rapier, cannon-es | Accepted |
-| D7 | Static hosting on GitHub Pages only; no hosted PR previews; no backend | Cloudflare Pages, Netlify, Vercel | Accepted (owner decision) |
+| D7 | Static hosting on GitHub Pages for now; no hosted PR previews; no backend. **The build must stay host-agnostic** (plain static `dist/`, relative `base: './'`, no host-specific features) so production can move to another host (own domain, Cloudflare, itch.io) by changing only the CI deploy step | Cloudflare Pages, Netlify, Vercel | Accepted (owner decision) |
 | D8 | Fake curves via bent-world shader + proxy train ahead (must-have, R12) | True spline track with curved consist | Accepted for MVP |
 | D12 | Frame: +Y up, travel toward −Z, consist along Z; MVP consist = kupe car + dining car | 3-car layout with separate corridor car | Accepted (cross-review) |
 | D9 | Art source files (.blend, EXR) live outside the runtime repo; plain Git (no LFS) for optimised assets | Git LFS monorepo | Accepted (CICD §5) |
