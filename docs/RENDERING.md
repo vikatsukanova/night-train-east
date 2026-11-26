@@ -1,10 +1,30 @@
 # Night Train East — Rendering & Art Direction Plan
 
-> Status: **v0.1 Technical Art Spec** · Scope: MVP (`M1–M3`) with architecture ready for `v0.2` (`M4` station stop)
-> Stack: `three.js` (`WebGLRenderer`, WebGL2) · Vite + TypeScript · Static GitHub Pages · **Third-person** camera (over-the-shoulder, collision-aware)
+> Status: **v0.1 Technical Art Spec** · Scope: **one-room MVP** (M1 compartment, fixed camera, one NPC; see PRD §3). The rest of this doc is the full-game design, kept for v0.2+
+> Stack: `three.js` (`WebGLRenderer`, WebGL2) · Vite + TypeScript · Static GitHub Pages · **Fixed camera** in the MVP (third-person rig parked for v0.2)
 > Budgets: **60 fps @ 1080p output** (M1 Air / Intel Iris Xe, Medium; internal render ≤ 1600×900 until measured) · **≤ 300 scene draw calls** (post passes excluded) · **≤ 1.5M tris** · **≤ 512 MB VRAM** · **≤ 25 MB initial load**
 
 ---
+
+## 0. One-Room MVP Overrides (read this first)
+
+The MVP is one kupe compartment seen from a fixed camera, with one seated NPC (the girl) and the
+landscape passing the window. Because the camera barely moves and the room is tiny, we spend far more
+per pixel than the full-train plan allowed. Where this section and the rest of the doc disagree, **this
+section wins for the MVP**.
+
+| Topic | Full-train plan (below) | One-room MVP |
+|---|---|---|
+| Interior lighting | Emissive lamps + at most one bake per car until P4 | **Full-quality Cycles bake of the compartment from P3**: `LM_lamps` at 2048² (it's one room), and `LM_window` too if the dusk → dawn change needs it. Bake AO into the lightmap. This is the main realism lever. |
+| Geometry | Cheap bevelled trim, proxy luggage | Model **only what the camera can see**, but model it properly: bevelled edges that catch light, real folds in the blanket and pillow, luggage with straps and buckles. Interior budget up to ~300k tris. |
+| Textures | 1024–2048 px caps | Hero surfaces (wall wood, table, blanket, her face) may use 2048² on Medium. Use detail normals for wood grain and wool weave. |
+| Characters | 3–5 stylised NPCs, 1024² each | **One hero NPC**, ~40–60k tris, 2048² body/face + 1024² hair/cloth. Soft painterly skin, no pores or SSS pass. Lit by a baked `LightProbe` at her seat plus a warm rim from the lamp so her face never looks flat or under-lit. Idle loop: breathing, blinks, slow head turns to the window, occasional sip. |
+| Shadows | No interior shadow maps | Still none for static geometry (baked). Allow **one small shadow-casting spot** from the wall lamp, limited to the girl, the tea glasses and the table, if it measures under 1 ms. Otherwise use a baked contact shadow under her plus blob shadows under the glasses. |
+| Post-FX | Bloom off on Medium initially | AgX tone mapping, 3D LUT, vignette and FXAA on all tiers. Bloom on Medium if measured headroom (the lamp shade should glow). SSAO stays off: the bake covers it. |
+| Window | Frost and reflection as polish | Window glass is the second-biggest realism lever after the bake: faint warm room reflection at night, rounded frame with the second sash bar, edge frost (PRD §3.2). |
+| Exterior | 3 biomes, lake planar reflection, curving track | Birch forest must look great **through one window at ~3–30 m**. Near trees use real trunk meshes with birch bark texture; far trees are cards. No lake reflection or curving track in the MVP. |
+| Camera | Third-person rig with collision | Fixed camera, ~50° vertical FOV, gentle eased look (±25° yaw, ±12° pitch). A very slight carriage sway (off with reduced motion). |
+| Draw calls | ≤ 300 | Same cap, expected far lower (~80–120). |
 
 ## 1. Art Style Target ("Stylised-Realistic")
 
