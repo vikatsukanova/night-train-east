@@ -139,3 +139,22 @@ describe("dev perf instrumentation helpers", () => {
 		expect(summary.max).toBe(100);
 	});
 });
+
+describe("chunkMinViewDepth (fog cull by camera-space depth)", () => {
+	it("measures depth along the view direction, not along the track", async () => {
+		const { chunkMinViewDepth, CHUNK_BOUNDS_HALF_WIDTH_M } = await import(
+			"../../src/world/scenery/chunkMath"
+		);
+		// Looking straight ahead (-Z): chunk 4 spans z in [-400, -320] → nearest depth 320.
+		const ahead = { px: 0, py: 1.6, pz: 0, fx: 0, fy: 0, fz: -1 };
+		expect(chunkMinViewDepth(4, 0, ahead)).toBeCloseTo(320);
+		// Looking sideways (-X) out of the window: depth is bounded by the lateral extent,
+		// so a far-along-track chunk is still close in view depth and must not be fog-culled.
+		const side = { px: 0, py: 1.6, pz: 0, fx: -1, fy: 0, fz: 0 };
+		expect(chunkMinViewDepth(4, 0, side)).toBeCloseTo(
+			-CHUNK_BOUNDS_HALF_WIDTH_M,
+		);
+		// Chunks entirely behind the camera have negative depth (never fog-culled; frustum handles them).
+		expect(chunkMinViewDepth(-2, 0, ahead)).toBeLessThan(0);
+	});
+});

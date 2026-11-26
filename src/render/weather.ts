@@ -162,9 +162,10 @@ void main() {
 	if (vAlpha <= 0.004) discard;
 	float r = length(vUv - vec2(0.5)) * 2.0;
 	if (r > 1.0) discard;
-	float soft = smoothstep(1.0, 0.15, r);
+	float soft = 1.0 - smoothstep(0.15, 1.0, r);
 	float alpha = soft * soft * vAlpha * 0.88;
 	gl_FragColor = vec4(uSnowColor, alpha);
+	#include <colorspace_fragment>
 }
 `;
 

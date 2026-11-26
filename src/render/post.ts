@@ -89,8 +89,10 @@ export function createPostPipeline(
 	renderer.info.autoReset = false;
 
 	const gl = renderer.getContext();
+	// Either extension makes RGBA16F colour-renderable on WebGL2.
 	const supportsHalfFloat =
-		gl.getExtension("EXT_color_buffer_half_float") !== null;
+		gl.getExtension("EXT_color_buffer_half_float") !== null ||
+		gl.getExtension("EXT_color_buffer_float") !== null;
 	const frameBufferType = supportsHalfFloat ? HalfFloatType : UnsignedByteType;
 	const bloomActive = Boolean(options.bloom && supportsHalfFloat);
 
@@ -137,7 +139,9 @@ export function createPostPipeline(
 	function rebuildEffectPass(): void {
 		if (effectPass) {
 			composer.removePass(effectPass);
-			effectPass.dispose();
+			// EffectPass.dispose() would also dispose the shared effects we are about to reuse,
+			// so release only the pass's own material.
+			effectPass.fullscreenMaterial.dispose();
 		}
 		const effects: Effect[] = [fxaaEffect];
 		if (bloomEffect) effects.push(bloomEffect);
@@ -172,15 +176,20 @@ export function createPostPipeline(
 			composer.setMainCamera(nextCamera);
 		},
 		setLut(lut: Texture | null, opacity = 1) {
-			if (lutEffect) {
-				lutEffect.dispose();
-				lutEffect = null;
-			}
-			if (lut) {
-				lutEffect = new LUT3DEffect(lut, { tetrahedralInterpolation: true });
+			if (lut && lutEffect) {
+				// Same pass membership: update in place, no shader recompile.
+				lutEffect.lut = lut;
 				lutEffect.blendMode.opacity.value = opacity;
+				return;
 			}
+			const previous = lutEffect;
+			lutEffect = lut
+				? new LUT3DEffect(lut, { tetrahedralInterpolation: true })
+				: null;
+			if (lutEffect) lutEffect.blendMode.opacity.value = opacity;
+			if (previous === lutEffect) return;
 			rebuildEffectPass();
+			previous?.dispose();
 		},
 		getMetrics(): PostFrameMetrics {
 			return {

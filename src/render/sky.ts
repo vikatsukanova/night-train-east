@@ -71,7 +71,7 @@ float starLayer(vec3 dir, float scale, float density, float time) {
 	vec3 offset = 0.2 + 0.6 * rnd;
 	float dist = length(f - offset);
 	float size = mix(0.045, 0.125, fract(rnd.y * 13.7));
-	float core = smoothstep(size, size * 0.15, dist);
+	float core = 1.0 - smoothstep(size * 0.15, size, dist);
 	float twinkle = 0.74 + 0.26 * sin(time * (1.1 + rnd.z * 2.2) + rnd.y * 62.8318);
 	return core * core * twinkle * mix(0.45, 1.0, fract(rnd.z * 7.3));
 }
@@ -89,7 +89,7 @@ void main() {
 	float n1 = valueNoise2D(cloudUv);
 	float n2 = valueNoise2D(cloudUv * 2.3 + vec2(4.7, 2.1));
 	float clouds = smoothstep(0.42, 0.82, n1 * 0.65 + n2 * 0.35);
-	float cloudMask = smoothstep(0.03, 0.22, dir.y) * smoothstep(0.65, 0.18, dir.y);
+	float cloudMask = smoothstep(0.03, 0.22, dir.y) * (1.0 - smoothstep(0.18, 0.65, dir.y));
 	sky = mix(sky, mix(uHorizonColor, uGlowColor, 0.35), clouds * cloudMask * 0.28);
 
 	// Directional solar/lunar atmospheric Mie glow + soft celestial disc.
@@ -115,6 +115,7 @@ void main() {
 	vec3 finalColor = mix(uFogColor, sky, fogLock);
 
 	gl_FragColor = vec4(finalColor, 1.0);
+	#include <colorspace_fragment>
 }
 `;
 

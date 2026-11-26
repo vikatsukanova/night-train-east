@@ -192,8 +192,8 @@ if (context) {
 					Math.min(rideT, clock.durationSec) * clock.compressionHoursPerSec;
 				const tod = evaluateTimeOfDay(continuousHour, todState);
 
-				world.update(distanceM, tod);
 				cabin.render(paused ? 1 : alpha);
+				world.update(distanceM, tod, cabin.camera);
 				sky.update(tod, cabin.camera.position, rideT);
 				snow.update({
 					cameraPosition: cabin.camera.position,
