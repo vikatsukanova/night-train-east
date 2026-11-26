@@ -2,6 +2,12 @@
 
 > Status: **Draft v0.1** · Read with `PRD.md`, `RENDERING.md`, and `CICD.md`
 
+> **One-room MVP (owner, 2026-11-26):** the MVP is a single kupe compartment with a fixed camera and one
+> seated NPC (PRD §3). For the MVP, the boot flow uses a fixed `cabinCamera` instead of the player
+> controller. `player/` (walking, third-person rig, collision, doors) stays in the repo for v0.2 but isn't
+> wired in. `npc/` holds just the girl. The consist is one compartment's worth of the kupe car. Sections
+> below describe the full game and still apply where they don't conflict with this.
+
 ## 1. Tech stack
 
 | Concern | Choice | Why |
@@ -279,5 +285,6 @@ interface SaveV1 {
 | D9 | Art source files (.blend, EXR) live outside the runtime repo; plain Git (no LFS) for optimised assets | Git LFS monorepo | Accepted (CICD §5) |
 | D10 | Baked dual lightmaps (lamps / window) blended by time of day; no interior shadow maps | Realtime lights + shadows | Accepted (RENDERING §2) |
 | D11 | Custom analytical sky dome + AgX + 3D LUT grading via pmndrs/postprocessing | three `Sky` (Preetham), ACES | Accepted (RENDERING §4, §6) |
+| D13 | MVP is one compartment, fixed camera, one NPC (the girl); walking and other cars move to v0.2 | Full walkable 2-car train in MVP | Accepted (owner decision, 2026-11-26) |
 
 New architectural decisions get an entry here (or an ADR in `docs/adr/` if longer than a paragraph).
