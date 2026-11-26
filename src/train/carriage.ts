@@ -28,6 +28,12 @@ const trim = new MeshStandardMaterial({ color: 0xa97846, roughness: 0.48 });
 const floor = new MeshStandardMaterial({ color: 0x40302e });
 const cream = new MeshStandardMaterial({ color: 0xc1a287 });
 const fabric = new MeshStandardMaterial({ color: 0x42716d });
+// Greybox stand-in for baked interior lamp light (RENDERING §2.1): a faint warm
+// self-glow on interior surfaces, so the cabin reads warm without realtime lights.
+const lampBake = 0.42;
+for (const material of [wall, wood, trim, floor, cream, fabric]) {
+	material.emissive.copy(material.color).multiplyScalar(lampBake);
+}
 const lamp = new MeshStandardMaterial({
 	color: 0xffd2a0,
 	emissive: 0xffad61,
