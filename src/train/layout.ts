@@ -45,6 +45,13 @@ export const compartments = Array.from({ length: 4 }, (_, index) => {
 		opening: { start: middle - 0.44, end: middle + 0.44 },
 		window: { start: middle - 0.72, end: middle + 0.72 },
 		bunks: rectangle(-innerWall, dividerLeft, end - 0.54, end - 0.055),
+		// The facing pair of berths against the other compartment wall.
+		facingBunks: rectangle(
+			-innerWall,
+			dividerLeft,
+			start + 0.055,
+			start + 0.54,
+		),
 		table: rectangle(-innerWall, -0.94, middle - 0.24, middle + 0.24),
 	};
 });
@@ -88,10 +95,10 @@ export function walkableLayout(clearance: number) {
 		),
 	];
 	const gates: Bounds[] = [];
-	for (const { start, opening, bunks, table } of compartments) {
+	for (const { opening, bunks, facingBunks, table } of compartments) {
 		const roomLeft = -innerWall + clearance;
 		const roomRight = dividerLeft - clearance;
-		const roomStart = start + 0.055 + clearance;
+		const roomStart = facingBunks.maxZ + clearance;
 		const roomEnd = bunks.minZ - clearance;
 		paths.push(
 			rectangle(table.maxX + clearance, roomRight, roomStart, roomEnd),

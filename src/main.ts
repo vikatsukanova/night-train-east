@@ -1,17 +1,16 @@
 import { RouteClock } from "./core/clock";
 import { startLoop } from "./core/loop";
-import { avatarRadius, createAvatar } from "./player/avatar";
-import { createCameraRig } from "./player/cameraRig";
-import { createController } from "./player/controller";
-import { createInput } from "./player/input";
-import {
-	createInteractionPrompt,
-	nearestInteractable,
-} from "./player/interact";
+import { createCabinCamera } from "./render/cabinCamera";
 import { contextAttributes, createRenderer } from "./render/renderer";
 import { createTestScene } from "./render/test-scene";
 import { createCarriage } from "./train/carriage";
-import { spawn } from "./train/layout";
+import {
+	compartments,
+	dividerLeft,
+	innerWall,
+	sill,
+	windowTop,
+} from "./train/layout";
 import { createPauseOverlay } from "./ui/pause";
 import { createBirchWorld } from "./world";
 import "./style.css";
@@ -46,7 +45,10 @@ const canvas = document.createElement("canvas");
 const context = canvas.getContext("webgl2", contextAttributes);
 if (context) {
 	canvas.setAttribute("role", "img");
-	canvas.setAttribute("aria-label", "Third-person view inside the night train");
+	canvas.setAttribute(
+		"aria-label",
+		"View from inside a night train compartment",
+	);
 	app.append(canvas);
 
 	const draw = createRenderer(canvas, context);
@@ -84,23 +86,55 @@ if (context) {
 		const world = createBirchWorld(scene, {
 			...(devParams?.seed !== undefined ? { routeSeed: devParams.seed } : {}),
 		});
-		const carriage = createCarriage(avatarRadius);
-		const avatar = createAvatar();
-		const player = createController(spawn);
-		const rig = createCameraRig();
-		rig.camera.far = VIEW_DISTANCE_M;
-		scene.add(carriage.group, avatar.group);
+		const [room] = compartments;
+		if (!room) throw new Error("Missing cabin layout.");
+		const windowZ = (room.window.start + room.window.end) / 2;
+		const windowY = (sill + windowTop) / 2;
+		const carriage = createCarriage(0);
+		carriage.render(1);
+		// Reflect around this room's centre so the greybox bunk is on camera-right.
+		carriage.group.scale.z = -1;
+		carriage.group.position.z = 2 * windowZ;
+		scene.add(carriage.group);
+		const cabin = createCabinCamera(
+			{ x: dividerLeft - 0.05, y: windowY - 0.24, z: windowZ + 0.08 },
+			{ x: -innerWall, y: windowY - 0.21, z: windowZ - 0.19 },
+			VIEW_DISTANCE_M,
+		);
 
-		const showPrompt = createInteractionPrompt(app);
-		const input = createInput(canvas, (locked) => {
-			showPaused(!locked);
-			if (!locked) showPrompt();
+		let boarded = false;
+		let paused = true;
+		const showPaused = createPauseOverlay(app, () => {
+			boarded = true;
+			setPaused(false);
 		});
-		const showPaused = createPauseOverlay(app, input.capture);
-		// Start paused so first-time players see the "click to continue" hint.
-		showPaused(true);
-		showPrompt();
-		const interactables = [carriage.door];
+		showPaused(true, "Board the train");
+
+		function setPaused(value: boolean) {
+			paused = value;
+			cabin.release();
+			showPaused(paused, "Paused — click to continue");
+		}
+
+		window.addEventListener("keydown", (event) => {
+			if (event.key === "Escape" && boarded && !event.repeat) {
+				setPaused(!paused);
+			}
+		});
+		const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+		canvas.addEventListener("pointermove", (event) => {
+			if (paused || reducedMotion.matches || event.pointerType !== "mouse")
+				return;
+			const bounds = canvas.getBoundingClientRect();
+			cabin.aim(
+				(2 * (event.clientX - bounds.left)) / bounds.width - 1,
+				(2 * (event.clientY - bounds.top)) / bounds.height - 1,
+			);
+		});
+		canvas.addEventListener("pointerleave", cabin.release);
+		window.addEventListener("blur", cabin.release);
+		document.addEventListener("visibilitychange", cabin.release);
+		reducedMotion.addEventListener("change", cabin.release);
 		const devOverlay =
 			attachDevTools && devParams
 				? attachDevTools(
@@ -113,35 +147,16 @@ if (context) {
 
 		startLoop(
 			(dt) => {
-				// Paused (no pointer lock): the ride and the player both hold still.
-				if (!input.locked()) return;
+				if (paused) return;
 				clock.advance(dt);
-				const controls = input.read();
-				rig.update(
-					dt,
-					controls.dx,
-					controls.dy,
-					player.state,
-					carriage.colliders,
-				);
-				player.update(dt, controls, rig.yaw, carriage.door.walkable);
-				const nearby = nearestInteractable(
-					player.state,
-					player.state.yaw,
-					interactables,
-				);
-				if (controls.interact) nearby?.toggle(player.state);
-				carriage.update(dt);
-				showPrompt(nearby?.prompt(player.state));
+				cabin.update(dt);
 			},
 			(alpha) => {
-				const blend = input.locked() ? alpha : 1;
-				world.update(clock.distanceAt(clock.rideT + blend * FIXED_STEP_SEC));
-				const pose = player.sample(blend);
-				rig.render(blend, pose, carriage.render(blend));
-				avatar.render(pose, rig.camera.position);
+				const rideT = clock.rideT + (paused ? 0 : alpha * FIXED_STEP_SEC);
+				world.update(clock.distanceAt(rideT));
+				cabin.render(paused ? 1 : alpha);
 				devOverlay?.begin();
-				draw(scene, rig.camera);
+				draw(scene, cabin.camera);
 				devOverlay?.end();
 				devOverlay?.update(clock, world.chunks.getVisibleChunkCount());
 				onFirstFrame?.();

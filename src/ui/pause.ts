@@ -4,10 +4,10 @@ export function createPauseOverlay(container: HTMLElement, resume: () => void) {
 	const overlay = document.createElement("button");
 	overlay.type = "button";
 	overlay.className = "pause-overlay";
-	overlay.textContent = "Paused — click to continue";
 	overlay.addEventListener("click", resume);
 	container.append(overlay);
-	return (paused: boolean) => {
+	return (paused: boolean, label: string) => {
+		overlay.textContent = label;
 		overlay.hidden = !paused;
 	};
 }

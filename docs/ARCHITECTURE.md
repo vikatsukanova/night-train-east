@@ -118,6 +118,7 @@ src/
     route.ts              route schema (zod-validated in dev/tests), segment lookup
   render/
     renderer.ts           WebGLRenderer setup, resize, DPR cap, quality tiers
+    cabinCamera.ts        fixed MVP viewpoint and eased pointer look (layout supplied at boot)
     post.ts               post-FX chain per tier
     timeOfDay.ts          curve → sun/moon dir, sky params, fog, exposure, LUT blend
     sky.ts, weather.ts
