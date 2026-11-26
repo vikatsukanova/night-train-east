@@ -24,6 +24,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "2.6.9",
 		"@types/three": "0.187.0",
+		"stats-gl": "^4.2.3",
 		"typescript": "6.0.3",
 		"vite": "8.4.0",
 		"vitest": "5.1.2"
