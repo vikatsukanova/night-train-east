@@ -50,15 +50,17 @@ jobs:
           PAGE_URL: ${{ steps.pages.outputs.page_url }}
         run: |
           entry="$(jq -er 'to_entries[] | select(.value.isEntry) | .value.file' dist/.vite/manifest.json)"
-          for attempt in {1..10}; do
-            if curl -fsSL --max-time 10 "${PAGE_URL%/}/" -o "$RUNNER_TEMP/live.html" &&
+          # Cache-busting query: the Pages CDN may serve the previous index.html for a few minutes.
+          bust="nte=$GITHUB_SHA-$GITHUB_RUN_ATTEMPT"
+          for attempt in {1..30}; do
+            if curl -fsSL --max-time 10 "${PAGE_URL%/}/?$bust" -o "$RUNNER_TEMP/live.html" &&
               cmp -s dist/index.html "$RUNNER_TEMP/live.html" &&
-              curl -fsSL --max-time 10 "${PAGE_URL%/}/$entry" -o "$RUNNER_TEMP/live.js" &&
+              curl -fsSL --max-time 10 "${PAGE_URL%/}/$entry?$bust" -o "$RUNNER_TEMP/live.js" &&
               cmp -s "dist/$entry" "$RUNNER_TEMP/live.js"; then
               printf 'Deployed %s to %s\n' "$GITHUB_SHA" "$PAGE_URL" >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
-            if [[ "$attempt" != 10 ]]; then sleep 5; fi
+            if [[ "$attempt" != 30 ]]; then sleep 10; fi
           done
           echo "::error::The live Pages HTML and entry bundle did not match $GITHUB_SHA."
           exit 1
