@@ -44,6 +44,8 @@ if (context) {
 		if (!locked) showPrompt();
 	});
 	const showPaused = createPauseOverlay(app, input.capture);
+	// Start paused so first-time players see the "click to continue" hint.
+	showPaused(true);
 	showPrompt();
 	const interactables = [carriage.door];
 	let onFirstFrame: (() => void) | undefined;
