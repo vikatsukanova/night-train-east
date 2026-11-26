@@ -17,7 +17,7 @@ export function createRenderer(
 	let lastHeight = 0;
 	let lastDpr = 0;
 
-	return (scene: Scene, camera: PerspectiveCamera) => {
+	const draw = (scene: Scene, camera: PerspectiveCamera) => {
 		const width = Math.max(canvas.clientWidth, 1);
 		const height = Math.max(canvas.clientHeight, 1);
 		const dpr = Math.min(
@@ -37,4 +37,6 @@ export function createRenderer(
 
 		renderer.render(scene, camera);
 	};
+
+	return Object.assign(draw, { renderer });
 }
