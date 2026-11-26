@@ -1,0 +1,11 @@
+.pause-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 1;
+	border: 0;
+	background: rgb(12 15 23 / 32%);
+	color: #fff6e8;
+	font: inherit;
+	text-shadow: 0 1px 5px #16100b;
+	cursor: pointer;
+}
