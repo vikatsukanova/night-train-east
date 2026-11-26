@@ -1,7 +1,7 @@
 # Night Train East CI/CD and pull requests
 
 This is the implementation plan for the browser game described in [the PRD](PRD.md).
-P0 ends with a small WebGL scene running on GitHub Pages, a reviewable PR preview, and
+P0 ends with a small WebGL scene running on GitHub Pages and
 working quality gates. The pipeline must stay cheap enough to run on every push to a PR.
 
 ## 1. Branches, commits, and merges
@@ -37,8 +37,7 @@ while still passing all technical gates.
   in the PR. GitHub prevents self-approval. Keep approval-of-the-last-push off so the owner can
   still approve an agent-authored PR after updating its branch. AI review is advisory.
 - Leave merge queue and auto-merge off. With one merger, strict up-to-date checks and small PRs
-  are enough. Previews are expected for review and kept out of required status checks so a
-  hosting outage cannot block a tested fix. The owner records any preview exception in the PR.
+  are enough.
 
 See [GitHub ruleset layering and availability](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets),
 [PR-only bypass](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository),
@@ -60,10 +59,10 @@ non-browser jobs, and a pinned Playwright Linux image for the browser job.
    fast unit tests. Local scripts expose these same commands without auto-fixing in CI.
 2. **`ci / package` · 2–4 min, after quality.** Restore the store and install, validate
    assets and credits (20–90 s), build with Vite (20–60 s), then run the static size gate
-   (5–20 s). Publish `dist` from that build for the later browser and preview jobs.
+   (5–20 s). Publish `dist` from that build for the later browser and deploy jobs.
    Include budget totals, top contributors, and asset validation results in the run summary.
 3. **`ci / browser` · 3–5 min, after package.** Serve `dist` under
-   `/night-train-east/` and run a brief boot check at the preview root. Check out the
+   `/night-train-east/` and run a brief boot check. Check out the
    same tested SHA and use the locked tools to build the rendering fixture. Run boot
    and cold-load checks first (30–90 s), then visual comparisons and performance
    counters (1–3 min). The budget includes setup and collecting failure evidence.
@@ -173,62 +172,16 @@ the comparison base when a changed-file report needs it.
   hitches **≤50 ms**, and check memory over a **60-minute** idle run. Check Chrome,
   Firefox and Safari manually for release, covering the PRD's supported versions.
 
-## 4. PR previews
+## 4. PR previews: none (owner decision)
 
-GitHub Pages serves production.
+There are **no hosted per-PR previews**. GitHub Pages serves only production from `main`.
 
-> **Owner decision:** previews use **Cloudflare Pages** (account already set up). Start with its GitHub
-> integration (P1): it builds every same-repo PR branch and posts the preview URL on the PR, with zero
-> workflow code. The repo has no runtime secrets, so this is acceptable. If we later need previews built from
-> the exact CI-tested artifact, switch to **Cloudflare Direct Upload** (`wrangler pages deploy dist`) from a
-> trusted `workflow_run` job, following the security rules below (written for Netlify; same rules apply).
-
-Original comparison, kept for reference:
-
-- **Netlify draft deploys.** Upload the already-tested static build to one dedicated
-  preview site, use its immutable deploy URL, and delete the draft through the API.
-  This costs one extra provider account and gives explicit ownership of what gets published.
-- **Cloudflare Pages Direct Upload.** Also accepts prebuilt files and supports branch
-  aliases. Cloudflare documents a restriction on deleting the latest branch deploy, so
-  it is a poorer fit for close-time cleanup. [Cloudflare preview lifecycle](https://developers.cloudflare.com/pages/configuration/preview-deployments/)
-- **Separate GitHub Pages repo.** A path per PR can reuse GitHub, but each update/cleanup
-  has to republish a shared site, with cross-repo credentials, storage limits, and
-  concurrency handling. It would also need a separate origin from production.
-
-Use one preview site with a harmless placeholder as its published root. For every green
-same-repository PR revision, including drafts, publish its static artifact as a draft deploy
-using the Netlify API file-digest flow. Reuse the deploy for duplicate runs on the same
-tested head and base. Use the API-provided HTTPS deploy URL. Identify deployments by
-repo, PR number, and run in provider metadata. After the deploy is ready, update one
-bot-authored PR comment with the URL and tested revision. Indicate when the link refers
-to an older revision while new checks are pending or failing. Delete superseded drafts
-after the replacement is ready. Enable preview access control if previews contain private
-material. An unlisted URL or a noindex header provides discoverability control only.
-[Netlify draft deploy API](https://docs.netlify.com/api-and-cli-guides/api-guides/get-started-with-api/#draft-deploys)
-· [Netlify delete deploy API](https://open-api.netlify.com/#tag/deploy/operation/deleteDeploy)
-
-Use a default-branch `workflow_run` publisher triggered by successful PR CI. Verify the
-workflow ID, event, repository, run and artifact IDs, open PR, and current head/base
-against GitHub's API, including that the tested merge commit corresponds to that head
-and base. Resolve the PR number from GitHub metadata. Upload only the
-validated static tree from the matching run. Check archive size and paths before extraction,
-reject links and provider config/functions/redirect files, and give the API only static
-files. The publisher never runs scripts from PR code or the artifact and restores no PR cache.
-Keep its credential in a main-restricted preview environment and use a dedicated
-Netlify account/team with access only to preview resources.
-
-Handle `pull_request_target: closed` with default-branch cleanup code reading only event
-metadata. Serialize publish and cleanup per PR. Recheck open state and revision immediately
-before upload and before commenting. Delete an upload if a close or newer revision wins
-the race. On close, delete all drafts for the PR and mark the comment closed. Treat
-already-deleted drafts as success. Report failures and reconcile orphan drafts on a daily
-schedule. Confirm deletion and stale-run behavior in the P4 exercise.
-
-Fork PRs run the same read-only CI subject to GitHub's fork approval policy and receive no
-automatic hosted preview. After inspecting a fork change, the owner can promote the reviewed
-revision to a companion same-repo PR and link its preview back. Record this exception and
-which revision was previewed. Keep **Send write tokens** and **Send secrets** to fork PRs
-disabled. [GitHub Actions event security](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target)
+- **Agents** test locally (dev server + headless browser screenshots) and in CI (Playwright boot,
+  visual and perf checks). Neither needs a hosted preview.
+- **The owner** reviews visual changes by checking out the branch (`gh pr checkout <n> && pnpm i && pnpm dev`)
+  and from the screenshots and clips every visual PR must include (AGENTS.md).
+- If that becomes tedious, add previews later: Cloudflare Pages or Netlify Git integration is a
+  zero-workflow-code option for a repo without secrets. That's a P4+ decision, not a dependency.
 
 ## 5. Binary assets and Git
 
@@ -259,7 +212,7 @@ Avoid repeated large binary re-exports and split assets by scene and streaming b
   `actions/upload-pages-artifact`, then `actions/deploy-pages` in a `github-pages`
   environment restricted to `main`. Grant `pages: write` and `id-token: write` only
   to the deploy job. Use a relative Vite base (`./`) and verify built asset URLs under
-  `/night-train-east/` and at a preview root. Keep asset lookup and navigation base-aware.
+  `/night-train-east/` and at `/`. Keep asset lookup and navigation base-aware.
   [Custom Pages workflow](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)
   · [Vite relative base](https://vite.dev/guide/build.html#relative-base)
 - Serialize the production workflow in a Pages concurrency group from the push event and
@@ -291,7 +244,7 @@ Post one concise advisory review. The owner still makes the acceptance decision.
 ## 8. Templates, dependencies, and permissions
 
 - **PR template.** Ask for problem and scope, issue/PRD link, tests run and reproduction
-  steps, preview and reviewed SHA, rendering before/after evidence, startup/perf deltas when
+  steps, reviewed SHA, rendering before/after evidence, startup/perf deltas when
   relevant, asset provenance, and any save migration or rollback considerations. Include the
   checklist below. Keep optional fields easy to mark N/A.
 - **Issue forms.** Game bug (steps, expected/actual, browser/GPU, save state), feature
@@ -316,7 +269,7 @@ Post one concise advisory review. The owner still makes the acceptance decision.
 
 - [ ] One focused change with a Conventional Commit title and a clear acceptance test.
 - [ ] Branch is current with `main`, and all required checks pass for the final revision.
-- [ ] Preview comment identifies the reviewed revision, or the owner records the exception.
+- [ ] Visual changes include screenshots or a short clip; the owner has run the branch locally if needed.
 - [ ] Test changes and any screenshot diffs explain the intended behavior.
 - [ ] Startup and rendering budgets pass, and relevant hardware results are recorded.
 - [ ] Asset credits, save compatibility, and rollback implications are addressed if applicable.
@@ -331,8 +284,8 @@ thing it protects actually exists, never before.
 | Phase | Turn on |
 |-------|---------|
 | **P0** | One workflow: install (pnpm cache) → `tsc --noEmit` → `biome ci` (incl. `noRestrictedImports` folder rules) → `vitest run` → `vite build` → a ~30-line byte-size script (initial JS + initial assets ≤ budget) → upload `dist` as an artifact. `ci / required` aggregator. On `main`: deploy to Pages. One ruleset: PR required, `ci / required` green, linear history, no force-push. PR template, CODEOWNERS, Dependabot (weekly, grouped). Pin actions by SHA. |
-| **P1** | Playwright **boot smoke** only (WebGL2 via SwiftShader, non-black frame, no console errors). PR previews via **Cloudflare Pages Git integration** (owner decision; zero workflow code; acceptable because the repo has no secrets the preview build could reach). Build command `pnpm install --frozen-lockfile && pnpm build`, output `dist`. |
+| **P1** | Playwright **boot smoke** only (WebGL2 via SwiftShader, non-black frame, no console errors). |
 | **P2** | glTF validator + KTX2 checks + `CREDITS.md` check, switched on with the **first real GLB/KTX2**. Perf counters in the browser job (scene draws, triangles, chunk-pool cap). First physical-iGPU capture of the heavy frame. |
 | **P3** | Deterministic visual baselines for the 3 third-person camera bookmarks once the scenes stop churning daily. Interaction + save/resume e2e. Second (review) ruleset with the owner PR-only bypass, if agent PR volume makes it worthwhile. |
-| **P4 / release** | Hardened Cloudflare Direct Upload lifecycle (§4) only if the Git-integration previews proved insufficient. Cross-browser, cold-load, GPU and 60-min idle acceptance. Tag `v0.1.0`. |
+| **P4 / release** | Revisit hosted previews only if local review proved tedious (§4). Cross-browser, cold-load, GPU and 60-min idle acceptance. Tag `v0.1.0`. |
 | **v0.2+** | Opt-in AI review (§7). |

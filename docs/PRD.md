@@ -99,7 +99,7 @@ It covers moments **M1–M3**. M4 (getting off at a station) comes after the MVP
   corridor window at 05:10) are recognisably close in **mood** to the M1–M3 concept art. The paintings
   set the mood, not a pixel or framing target.
 - On target hardware: frame-time p95 < 16.7 ms, and no streaming hitches > 50 ms.
-- CI is green, `main` is always deployable, and every PR gets a preview link.
+- CI is green, `main` is always deployable, and every visual PR includes screenshots or a clip.
 
 ## 6. Roadmap
 
@@ -111,7 +111,7 @@ Phases are `P0–P4` (not to be confused with concept moments M1–M4).
 | **P1 Moving window** | Greybox kupe car along Z, **capsule character + third-person camera rig with wall collision**, 2-D collision, treadmill chunks, birch biome (greybox cones), `FogExp2`, `stats-gl` | Walk the capsule down the corridor without the camera clipping, and watch an endless birch forest at 60 fps. Memory is flat over 10 min. **Boots in desktop Safari** (look around, hear one clack). |
 | **P2 The heavy frame, then the route** | First: the worst-case frame (night window, birch cards, snow, fog, tone map + FXAA), **measured on a real iGPU**. Then route JSON, time-of-day, steppe and lake biomes, blends, the bend + lake reflection (R12), audio | The heavy frame holds 60 fps on target hardware *before* biomes 2–3 are built. The full 25-min ride plays end to end. |
 | **P3 Life aboard** | Dining car, **player character model + animations** (idle, walk, drink, carry), look-out-window framing, tea, ambient passengers, HUD captions, settings, save/resume, end-of-ride | All R1–R13 pass in greybox/early art. |
-| **P4 Look & feel** | Final carriage art, lighting bake, post-FX tuning, quality tiers, cross-browser pass, PR previews if not done earlier | Mood comparison and perf budget pass. **MVP release `v0.1.0`.** |
+| **P4 Look & feel** | Final carriage art, lighting bake, post-FX tuning, quality tiers, cross-browser pass | Mood comparison and perf budget pass. **MVP release `v0.1.0`.** |
 | v0.2 | Station stop (M4 concept), **passenger dialogue (Ink)**, gamepad, sit/zen mode, photo mode, dual lightmaps, AI review | |
 
 **First three PRs**
@@ -137,7 +137,7 @@ Each question has a proposed default, which we'll use unless someone objects.
 4. **Art style fidelity?** The concept art is near-photoreal. *Default: "stylised-realistic"*:
    simplified geometry and strong lighting/fog/post-FX doing the heavy lifting. See `docs/RENDERING.md`.
 5. **Ride length?** *Default: 25 min* for the MVP, configurable via route data.
-6. **Previews?** ✅ **Decided (owner): Cloudflare Pages** (already set up) for per-PR previews. Production
-   stays on GitHub Pages.
+6. **PR previews?** ✅ **Decided (owner): none.** Production is on GitHub Pages only. The owner checks out
+   branches locally to review, and agents attach screenshots or clips.
 7. **Player character look?** *Default:* one stylised adult traveller in a winter coat (as in M3/M4),
    built from a CC0 base (e.g. Quaternius) and re-textured. Customisation is later.
