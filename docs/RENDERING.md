@@ -271,8 +271,9 @@ toktx --t2 --encode uastc --uastc_quality 2 --zstd 18 --genmipmap t-kupe-lm-lamp
 ### 8.1 Draw-Call Strategy (Target: ≤ 180 typical, ≤ 300 hard cap, scene draws only)
 
 > **Expected real bottleneck: fill rate, not triangles.** Alpha-tested tree cards, grass tufts, snow quads and the post
-> chain at 1080p are what will hurt Iris Xe. P2 starts by building and measuring that worst-case frame on a real iGPU
-> (night window + birch cards + snow + fog + tone map + FXAA) before more biomes are built.
+> chain at 1080p are what will hurt Iris Xe. P2 starts by building and measuring that worst-case frame
+> (night window + birch cards + snow + fog + tone map + FXAA) before more biomes are built: on an M4 proxy in P2,
+> on a real iGPU before release (PRD §7 Q9).
 
 - **Interior merging by trim material:** Merge static carriage architecture per carriage per material in Blender (`wood`, `cream-ceiling`, `brass`, `fabric`, `glass`, `emissive-lamp`). Each carriage renders in **~18–25 draw calls** (MVP consist of 2 cars + vestibule ≈ 50 draw calls; with door culling, usually only 1 car draws).
 - **Repeated interior props:** Dining-car tables, chairs, curtains, plates, saucers, and wall sconces use **`InstancedMesh`** (or `THREE.BatchedMesh` for mixed tableware/bottles sharing 1 atlas) — **~15 draw calls** for the entire dining car dressing.
@@ -344,7 +345,7 @@ Do **not** wait for final Blender assets to prove the atmosphere. Lock lighting,
    - Implement the stationary-origin treadmill ring buffer (80 m chunks), seeded `InstancedMesh` birch cylinder/cone proxies, passing telegraph poles, and `FogExp2` night lighting.
    - Wire `stats-gl` + `renderer.info` overlay; verify **60 fps and flat memory** over a 10-min run.
 2. **P2 — The Heavy Frame, then the Route (Atmosphere & Transitions):**
-   - **First**, build the worst-case night frame and measure it on target hardware. Only then continue.
+   - **First**, build the worst-case night frame and measure it (M4 proxy with headroom margin; real target hardware before release). Only then continue.
    - Add the custom analytical sky dome, unified Time-of-Day curve (`18:30 → 05:10`), biome seam blending (Steppe → Birch → Lake), GPU-instanced snow with carriage AABB culling, and the half-res M3 planar lake reflection + curved-track vertex bend.
    - Check that greybox screenshots at `18:30`, `22:45`, and `05:10` are heading toward the palettes of `docs/reference/m1–m3` (colour and value only; the final grade arrives in P4).
 3. **P3 — Life Aboard (Dynamic Props & Characters):**

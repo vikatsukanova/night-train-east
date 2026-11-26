@@ -167,8 +167,9 @@ the comparison base when a changed-file report needs it.
 - Log time to first frame, CPU-side frame timings, and asset/chunk allocation counts.
   Check that repeated traversal over the fixture keeps the loaded chunk pool within its
   configured cap. Treat timing from shared CPU runners and SwiftShader as diagnostic.
-- From P1, review rendering-heavy changes on an M1 MacBook Air or Intel Iris Xe at
-  1080p Medium. Before MVP release, measure p95 frame time **<16.7 ms**, streaming
+- Until P4, review rendering-heavy changes on the owner's Mac mini M4 as a proxy (vsync-off
+  frame time + 2× pixel stress run, `docs/perf/heavy-window-frame.md`; PRD §7 Q9). Before MVP
+  release, on a real M1 MacBook Air or Intel Iris Xe at 1080p Medium, measure p95 frame time **<16.7 ms**, streaming
   hitches **≤50 ms**, and check memory over a **60-minute** idle run. Check Chrome,
   Firefox and Safari manually for release, covering the PRD's supported versions.
 
@@ -285,7 +286,7 @@ thing it protects actually exists, never before.
 |-------|---------|
 | **P0** | One workflow: install (pnpm cache) → `tsc --noEmit` → `biome ci` (incl. `noRestrictedImports` folder rules) → `vitest run` → `vite build` → a ~30-line byte-size script (initial JS + initial assets ≤ budget) → upload `dist` as an artifact. `ci / required` aggregator. On `main`: deploy to Pages. One ruleset: PR required, `ci / required` green, linear history, no force-push. PR template, CODEOWNERS, Dependabot (weekly, grouped). Pin actions by SHA. |
 | **P1** | Playwright **boot smoke** only (WebGL2 via SwiftShader, non-black frame, no console errors). |
-| **P2** | glTF validator + KTX2 checks + `CREDITS.md` check, switched on with the **first real GLB/KTX2**. Perf counters in the browser job (scene draws, triangles, chunk-pool cap). First physical-iGPU capture of the heavy frame. |
+| **P2** | glTF validator + KTX2 checks + `CREDITS.md` check, switched on with the **first real GLB/KTX2**. Perf counters in the browser job (scene draws, triangles, chunk-pool cap). M4 proxy capture of the heavy frame (physical-iGPU capture moves to P4). |
 | **P3** | Deterministic visual baselines for the 3 third-person camera bookmarks once the scenes stop churning daily. Interaction + save/resume e2e. Second (review) ruleset with the owner PR-only bypass, if agent PR volume makes it worthwhile. |
-| **P4 / release** | Revisit hosted previews only if local review proved tedious (§4). Cross-browser, cold-load, GPU and 60-min idle acceptance. Tag `v0.1.0`. |
+| **P4 / release** | Revisit hosted previews only if local review proved tedious (§4). Cross-browser, cold-load, GPU (first physical M1 Air / Iris Xe capture) and 60-min idle acceptance. Tag `v0.1.0`. |
 | **v0.2+** | Opt-in AI review (§7). |
