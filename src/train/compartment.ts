@@ -15,6 +15,9 @@ import { createLuggageRack } from "./luggageRack";
 
 const unitBox = new BoxGeometry();
 const WINDOW_CORNER_RADIUS_M = 0.08;
+const RACK_LENGTH_M = 1.6;
+const TABLE_HALF_WIDTH_M = 0.4;
+const lampshadeGeometry = new CylinderGeometry(0.047, 0.077, 0.15, 12);
 
 function finish(color: number, emissiveIntensity = 0.4) {
 	return new MeshStandardMaterial({
@@ -216,8 +219,9 @@ export function createCompartment() {
 	const table = rectangle(
 		window.x,
 		window.x + 0.5,
-		centreZ - 0.31,
-		centreZ + 0.31,
+		// Nearly reaches the berth edges, so a seated passenger's legs go under it.
+		centreZ - TABLE_HALF_WIDTH_M,
+		centreZ + TABLE_HALF_WIDTH_M,
 	);
 	block(trim, box(table, 0.755, 0.775));
 	block(wood, box(table, 0.775, 0.81));
@@ -233,38 +237,47 @@ export function createCompartment() {
 		block(wood, box(berth, 0.35, 0.45));
 		block(upholstery, box(berth, 0.45, berthTopM));
 	}
+	// Racks are centred on the end walls, between the window wall and the doorway.
+	const wallMidX = (window.x + doorX - 0.06) / 2;
+	const rackSpan = {
+		startX: wallMidX - RACK_LENGTH_M / 2,
+		endX: wallMidX + RACK_LENGTH_M / 2,
+	};
 	room.add(
-		createLuggageRack(leftWallZ, -1, "holdall"),
-		createLuggageRack(rightWallZ, 1, "suitcases"),
+		createLuggageRack(leftWallZ, -1, "suitcases", rackSpan),
+		createLuggageRack(rightWallZ, 1, "suitcases", rackSpan),
 	);
 
-	const lampZ = window.minZ + (rightWallZ - window.minZ) * 0.31;
+	// A wall lamp either side of the window, mirrored about its centre.
+	// Centred in the wall space between the window frame and the end wall, and
+	// low enough to clear the luggage-rack brackets above.
+	const frameEdge = window.maxZ - centreZ + 0.075;
+	const lampOffset = (frameEdge + (leftWallZ - centreZ)) / 2;
 	const lampX = window.x + 0.12;
-	const lampY = 1.35;
-	block(
-		brass,
-		box(
-			rectangle(window.x, window.x + 0.023, lampZ - 0.06, lampZ + 0.06),
-			lampY - 0.18,
-			lampY + 0.1,
-		),
-	);
-	block(
-		brass,
-		box(
-			rectangle(window.x + 0.022, lampX + 0.02, lampZ - 0.015, lampZ + 0.015),
-			lampY - 0.118,
-			lampY - 0.092,
-		),
-	);
-	const lampshade = new Mesh(
-		new CylinderGeometry(0.047, 0.077, 0.15, 12),
-		shade,
-	);
-	lampshade.position.set(lampX, lampY, lampZ);
-	const light = new PointLight(0xffbb7c, 0.75, 1.7);
-	light.position.set(lampX + 0.04, lampY, lampZ);
-	room.add(lampshade, light);
+	const lampY = 1.22;
+	for (const lampZ of [centreZ - lampOffset, centreZ + lampOffset]) {
+		block(
+			brass,
+			box(
+				rectangle(window.x, window.x + 0.023, lampZ - 0.06, lampZ + 0.06),
+				lampY - 0.18,
+				lampY + 0.1,
+			),
+		);
+		block(
+			brass,
+			box(
+				rectangle(window.x + 0.022, lampX + 0.02, lampZ - 0.015, lampZ + 0.015),
+				lampY - 0.118,
+				lampY - 0.092,
+			),
+		);
+		const lampshade = new Mesh(lampshadeGeometry, shade);
+		lampshade.position.set(lampX, lampY, lampZ);
+		const light = new PointLight(0xffbb7c, 0.75, 1.7);
+		light.position.set(lampX + 0.04, lampY, lampZ);
+		room.add(lampshade, light);
+	}
 
 	return room;
 }

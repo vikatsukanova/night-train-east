@@ -1,11 +1,9 @@
 import {
 	BoxGeometry,
 	CylinderGeometry,
-	ExtrudeGeometry,
 	Group,
 	Mesh,
 	MeshStandardMaterial,
-	Shape,
 	SphereGeometry,
 	Vector3,
 } from "three";
@@ -27,7 +25,6 @@ const skin = cloth(0xa5735a);
 const hair = cloth(0x36221d);
 const coat = cloth(0x424442);
 const scarf = cloth(0x975b66);
-const blanket = cloth(0x555f44);
 const socks = cloth(0x494048);
 const up = new Vector3(0, 1, 0);
 
@@ -104,31 +101,6 @@ export function createGirl(seat: Seat) {
 		segment(socks, x, -0.3, 0.466, -0.514, 0.535, 0.047);
 		oval(girl, socks, x, -0.525, 0.577, 0.057, 0.04, 0.098);
 	}
-
-	// Extrude the folded profile across her lap. The front edge hangs over the knees.
-	const profile = new Shape();
-	profile.moveTo(-0.105, 0.16);
-	profile.quadraticCurveTo(0, 0.2, 0.12, 0.184);
-	profile.lineTo(0.31, 0.114);
-	profile.quadraticCurveTo(0.41, 0.114, 0.401, 0.05);
-	profile.lineTo(0.39, -0.029);
-	profile.lineTo(0.319, 0.042);
-	profile.lineTo(0.073, 0.065);
-	profile.lineTo(-0.105, 0.015);
-	profile.closePath();
-	const wrap = new Mesh(
-		new ExtrudeGeometry(profile, {
-			depth: 0.396,
-			bevelEnabled: true,
-			bevelSegments: 1,
-			bevelSize: 0.012,
-			bevelThickness: 0.012,
-		}),
-		blanket,
-	);
-	wrap.position.x = 0.198;
-	wrap.rotation.y = -Math.PI / 2;
-	girl.add(wrap);
 
 	return girl;
 }

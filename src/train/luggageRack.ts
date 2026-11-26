@@ -10,10 +10,8 @@ import {
 const unitBox = new BoxGeometry();
 const rackHeight = 1.48;
 const rackDepth = 0.34;
-const rackStartX = -1.31;
-const rackEndX = -0.16;
-const rackLength = rackEndX - rackStartX;
-const rackMidX = (rackStartX + rackEndX) / 2;
+/** Default span along the compartment wall (the walkable carriage's rooms). */
+const DEFAULT_SPAN = { startX: -1.31, endX: -0.16 } as const;
 const tube = 0.03;
 
 const brass = new MeshStandardMaterial({
@@ -42,7 +40,12 @@ export function createLuggageRack(
 	wallZ: number,
 	toward: 1 | -1,
 	luggage?: "suitcases" | "holdall",
+	span: { readonly startX: number; readonly endX: number } = DEFAULT_SPAN,
 ) {
+	const rackStartX = span.startX;
+	const rackEndX = span.endX;
+	const rackLength = rackEndX - rackStartX;
+	const rackMidX = (rackStartX + rackEndX) / 2;
 	const rack = new Group();
 	rack.position.set(0, rackHeight, wallZ);
 	const front = toward * rackDepth;
@@ -147,10 +150,10 @@ export function createLuggageRack(
 	}
 
 	if (luggage === "suitcases") {
-		bag(-0.82, 0, 0.145, 0.8, 0.19, 0.23);
-		bag(-0.825, 0.19, 0.145, 0.65, 0.16, 0.19);
+		bag(rackMidX - 0.085, 0, 0.145, 0.8, 0.19, 0.23);
+		bag(rackMidX - 0.09, 0.19, 0.145, 0.65, 0.16, 0.19);
 	} else if (luggage === "holdall") {
-		bag(-0.91, 0, 0.165, 0.58, 0.27, 0.27);
+		bag(rackMidX - 0.175, 0, 0.165, 0.58, 0.27, 0.27);
 	}
 	return rack;
 }
