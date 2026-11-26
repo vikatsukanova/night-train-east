@@ -1,0 +1,38 @@
+{
+	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+	"files": {
+		"includes": [
+			"*.json",
+			"index.html",
+			"vite.config.ts",
+			"src/**",
+			"tests/**",
+			"scripts/**"
+		]
+	},
+	"overrides": [
+		{
+			"includes": ["src/core/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"paths": {
+									"three": "Core must remain independent of three.js."
+								},
+								"patterns": [
+									{
+										"group": ["three/**"],
+										"message": "Core must remain independent of three.js."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		}
+	]
+}
