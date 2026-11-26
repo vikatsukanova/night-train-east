@@ -69,3 +69,33 @@ Run the same 10 s warmup + reset + 5 s sample with these URL flags to isolate th
 | M1 MacBook Air (macOS) | Safari | | 1920×1080 / 1600×900 | medium | | | | | | | | | | |
 | Intel Iris Xe (Windows/Linux) | Chrome | | 1920×1080 / 1600×900 | medium | | | | | | | | | | |
 | Intel Iris Xe (Windows/Linux) | Firefox | | 1920×1080 / 1600×900 | medium | | | | | | | | | | |
+
+## Proxy measurement — Mac mini M4 (NOT target hardware)
+
+The owner has no M1 Air or Iris Xe machine, so the frame was measured on a Mac mini M4 as a
+**proxy**. These numbers do **not** satisfy the P2 exit check on their own; they show how much
+headroom there is. The M4 GPU is roughly 2× an M1 Air's and has more memory bandwidth than Iris Xe.
+
+**Setup (2026-11-26, commit `c1c58af`):** macOS on Mac mini M4 (10-core GPU), Chrome via
+`ANGLE Metal Renderer: Apple M4`, mains power, Low Power Mode off, 60 Hz display. Chrome launched
+with `--disable-gpu-vsync --disable-frame-rate-limit` so frame time is not clamped to 16.7 ms.
+Viewport forced via DevTools `Emulation.setDeviceMetricsOverride` (DPR 1). For each row: load
+`?moment=M1&quality=…`, board, warm up 10 s, then 5 × (`resetFrameStats()` + 1 s sample). Frame
+times are the median across the 5 samples; "p95 worst" is the worst sample. Train moving at 60 km/h.
+
+| Run | Internal res | Avg fps (uncapped) | p50 ms | p95 ms | p95 worst ms | max ms | Scene calls | Post calls | Scene tris | Est. VRAM MiB | Chunks |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| medium, 1920×1080 | 1600×900 | 595 | 2.3 | 2.7 | 2.8 | 3.6 | 97 | 1 | 405k | 39 | 10/10 |
+| medium, 1920×1080, `nopost` | 1600×900 | 606 | 2.3 | 2.6 | 2.7 | 4.0 | 93 | 0 | 405k | 12 | 10/10 |
+| low, 1920×1080 | 1280×720 | 731 | 2.1 | 2.7 | 3.0 | 4.0 | 95 | 1 | 401k | 25 | 9/10 |
+| high, 1920×1080 | 1920×1080 | 379 | 2.7 | 4.2 | 4.5 | 6.2 | 96 | 17 | 411k | 77 | 10/10 |
+| **stress**: high, 2263×1273 (≈2× Medium's pixels, + bloom + 6000 snow) | 2263×1273 | 308 | 3.0 | 4.9 | 5.4 | 6.4 | 96 | 17 | 411k | 107 | 10/10 |
+
+stats-gl GPU timer on the medium run: ~2.4 ms.
+
+**Reading:** Medium p95 is 2.7 ms against a 16.7 ms budget (~6× headroom). The stress run, which
+is heavier than "Medium at 2× pixels", stays at 5.4 ms worst-case p95. Draw calls (≤ 97 of 300),
+triangles (≤ 0.41 M of 1.5 M) and VRAM estimate (≤ 107 of 512 MiB) are well inside budget.
+Even if the target iGPU is 3–5× slower than the M4 at this frame, Medium should stay under 16.7 ms,
+but that is an estimate. Iris Xe's bandwidth and alpha-card overdraw behaviour are the main unknowns,
+so the target-hardware table above should still be filled when a device is available.
