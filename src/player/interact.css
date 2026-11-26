@@ -1,0 +1,13 @@
+.interaction-prompt {
+	position: fixed;
+	top: 58%;
+	left: 50%;
+	transform: translateX(-50%);
+	margin: 0;
+	padding: 0.3rem 0.7rem;
+	border-radius: 0.25rem;
+	background: rgb(19 15 14 / 87%);
+	color: #fff6e8;
+	pointer-events: none;
+	white-space: pre;
+}
