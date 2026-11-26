@@ -22,6 +22,13 @@ import {
 } from "./layout";
 
 const unitBox = new BoxGeometry();
+// Luggage rack: a wire shelf just above a seated passenger's head, spanning
+// part of the compartment wall from the window side.
+const rackHeight = 1.48;
+const rackDepth = 0.34;
+const rackStartX = -1.31;
+const rackEndX = -0.16;
+const tube = 0.03;
 const wall = new MeshStandardMaterial({ color: 0xb98c65, roughness: 0.72 });
 const wood = new MeshStandardMaterial({ color: 0x633d30, roughness: 0.64 });
 const trim = new MeshStandardMaterial({ color: 0xa97846, roughness: 0.48 });
@@ -34,6 +41,20 @@ const lampBake = 0.42;
 for (const material of [wall, wood, trim, floor, cream, fabric]) {
 	material.emissive.copy(material.color).multiplyScalar(lampBake);
 }
+const brass = new MeshStandardMaterial({
+	color: 0xc9a25e,
+	metalness: 0.3,
+	roughness: 0.35,
+	emissive: 0x4a3518,
+});
+const wireMesh = new MeshStandardMaterial({
+	color: 0x3a2c1c,
+	transparent: true,
+	opacity: 0.55,
+	depthWrite: false,
+});
+const leather = new MeshStandardMaterial({ color: 0x5c3522, roughness: 0.6 });
+leather.emissive.copy(leather.color).multiplyScalar(lampBake);
 const lamp = new MeshStandardMaterial({
 	color: 0xffd2a0,
 	emissive: 0xffad61,
@@ -57,6 +78,102 @@ export function createCarriage(clearance: number) {
 		group.add(mesh);
 		if (solid) walls.push(bounds);
 		return mesh;
+	}
+
+	/** A thin tube between two points in the y–z plane at a fixed x. */
+	function strut(x: number, y1: number, z1: number, y2: number, z2: number) {
+		const mesh = new Mesh(unitBox, brass);
+		const dy = y2 - y1;
+		const dz = z2 - z1;
+		mesh.position.set(x, (y1 + y2) / 2, (z1 + z2) / 2);
+		mesh.scale.set(tube * 0.7, tube * 0.7, Math.hypot(dy, dz));
+		mesh.rotation.x = Math.atan2(-dy, dz);
+		group.add(mesh);
+	}
+
+	/** Wire luggage rack on the wall at `wallZ`, sticking out toward `toward`. */
+	function rack(wallZ: number, toward: 1 | -1) {
+		const front = wallZ + toward * rackDepth;
+		const [z1, z2] = toward > 0 ? [wallZ, front] : [front, wallZ];
+		const h = rackHeight;
+		add(wireMesh, box(rectangle(rackStartX, rackEndX, z1, z2), h - 0.01, h));
+		// Frame: front tube and two side tubes.
+		add(
+			brass,
+			box(
+				rectangle(rackStartX, rackEndX, front - tube / 2, front + tube / 2),
+				h - tube / 2,
+				h + tube / 2,
+			),
+		);
+		for (const x of [rackStartX, rackEndX]) {
+			add(
+				brass,
+				box(rectangle(x - tube / 2, x + tube / 2, z1, z2), h - tube / 2, h),
+			);
+		}
+		// Diagonal brackets down to the wall.
+		for (const x of [rackStartX + 0.06, rackEndX - 0.06]) {
+			strut(x, h, front - toward * 0.04, h - 0.3, wallZ);
+		}
+		// Hanging bar below the front edge, on two short drops.
+		const barY = h - 0.14;
+		const barZ = front - toward * 0.03;
+		add(
+			brass,
+			box(
+				rectangle(
+					rackStartX + 0.04,
+					rackEndX - 0.04,
+					barZ - tube / 3,
+					barZ + tube / 3,
+				),
+				barY - tube / 3,
+				barY + tube / 3,
+			),
+		);
+		for (const x of [rackStartX + 0.04, rackEndX - 0.04]) {
+			add(
+				brass,
+				box(
+					rectangle(
+						x - tube / 3,
+						x + tube / 3,
+						barZ - tube / 3,
+						barZ + tube / 3,
+					),
+					barY,
+					h,
+				),
+			);
+		}
+	}
+
+	/** Greybox bags on the racks of the compartment the camera looks into. */
+	function luggage(start: number, end: number) {
+		const h = rackHeight;
+		const endWall = end - 0.055;
+		add(
+			leather,
+			box(rectangle(-1.22, -0.42, endWall - 0.26, endWall - 0.03), h, h + 0.19),
+		);
+		add(
+			leather,
+			box(
+				rectangle(-1.15, -0.5, endWall - 0.24, endWall - 0.05),
+				h + 0.19,
+				h + 0.35,
+			),
+		);
+		const startWall = start + 0.055;
+		add(
+			leather,
+			box(
+				rectangle(-1.2, -0.62, startWall + 0.03, startWall + 0.3),
+				h,
+				h + 0.27,
+			),
+		);
 	}
 
 	const footprint = rectangle(-halfWidth, halfWidth, -halfLength, halfLength);
@@ -141,7 +258,14 @@ export function createCarriage(clearance: number) {
 	divider(-innerEnd, serviceOpening.start);
 	divider(serviceOpening.start, serviceOpening.end, doorHeight);
 	let edge = serviceOpening.end;
-	for (const { start, end, opening, bunks, table } of compartments) {
+	for (const {
+		start,
+		end,
+		opening,
+		bunks,
+		facingBunks,
+		table,
+	} of compartments) {
 		add(
 			wall,
 			box(
@@ -155,10 +279,13 @@ export function createCarriage(clearance: number) {
 		divider(opening.start, opening.end, doorHeight);
 		edge = opening.end;
 
-		for (const height of [0.45, 1.57]) {
-			add(wood, box(bunks, height - 0.1, height), true);
-			add(fabric, box(bunks, height, height + 0.12), true);
+		for (const berth of [bunks, facingBunks]) {
+			add(wood, box(berth, 0.35, 0.45), true);
+			add(fabric, box(berth, 0.45, 0.57), true);
 		}
+		// Wall-mounted luggage racks instead of upper berths (M1 concept art).
+		rack(end - 0.055, -1);
+		rack(start + 0.055, 1);
 		add(wood, box(table, 0.74, 0.81), true);
 		add(
 			trim,
@@ -174,6 +301,8 @@ export function createCarriage(clearance: number) {
 			),
 		);
 	}
+	const [viewed] = compartments;
+	if (viewed) luggage(viewed.start, viewed.end);
 	const last = compartments.at(-1);
 	if (last) {
 		add(
