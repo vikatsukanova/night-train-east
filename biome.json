@@ -33,6 +33,66 @@
 					}
 				}
 			}
+		},
+		{
+			"includes": ["src/npc/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"**/world",
+											"**/world/**",
+											"**/train",
+											"**/train/**",
+											"**/player",
+											"**/player/**",
+											"**/dialogue",
+											"**/dialogue/**",
+											"**/audio",
+											"**/audio/**",
+											"**/ui",
+											"**/ui/**"
+										],
+										"message": "NPCs must receive other feature data at boot."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": [
+				"src/world/**",
+				"src/train/**",
+				"src/player/**",
+				"src/dialogue/**",
+				"src/audio/**",
+				"src/ui/**"
+			],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": ["**/npc", "**/npc/**"],
+										"message": "Compose NPCs with other features at boot."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
 		}
 	]
 }

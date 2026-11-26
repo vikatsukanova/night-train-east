@@ -3,10 +3,9 @@
 > Status: **Draft v0.1** · Read with `PRD.md`, `RENDERING.md`, and `CICD.md`
 
 > **One-room MVP (owner, 2026-11-26):** the MVP is a single kupe compartment with a fixed camera and one
-> seated NPC (PRD §3). For the MVP, the boot flow uses a fixed `cabinCamera` instead of the player
-> controller. `player/` (walking, third-person rig, collision, doors) stays in the repo for v0.2 but isn't
-> wired in. `npc/` holds just the girl. The consist is one compartment's worth of the kupe car. Sections
-> below describe the full game and still apply where they don't conflict with this.
+> seated NPC (PRD §3). The boot flow builds the M1 compartment and positions the fixed
+> `cabinCamera` and the girl from `npc/`. The walkable carriage and `player/` are parked for v0.2.
+> Sections below describe the full game and still apply where they don't conflict with this.
 
 ## 1. Tech stack
 
@@ -131,7 +130,10 @@ src/
     trackside.ts          rails, sleepers, telegraph poles (strongest sense of speed)
   train/
     consist.ts            carriage list + layout (origins along Z, see §2 frame conventions)
-    carriage.ts           load interior glTF, colliders, doors, interior lights
+    compartment.ts        static M1 room, fixtures and window opening
+    compartmentLayout.ts  M1 room dimensions, fixed viewpoint and NPC seat anchor
+    luggageRack.ts        shared wall-mounted rack and greybox luggage
+    carriage.ts           parked walkable greybox, colliders and doors (v0.2)
     doors.ts, lamps.ts, sway.ts   (sway = subtle camera/interior rocking)
   player/
     controller.ts         third-person movement relative to camera yaw, walk speed, turn smoothing
@@ -143,6 +145,7 @@ src/
     interact.ts           nearest Interactable in front of the character within 1.2 m → prompt (E)
     heldItem.ts           attach tea glass to the hand bone, sip sequence
   npc/
+    girl.ts               seated M1 figure, positioned at boot
     npc.ts                NPC def: seat/pose, idle clip set, collision circle
     idle.ts               idle behaviour scheduler (sip, look out window, read, doze)
   dialogue/               v0.2: inkRuntime.ts, dialogueUI.ts (folder not created in MVP)

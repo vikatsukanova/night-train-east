@@ -1,16 +1,11 @@
 import { RouteClock } from "./core/clock";
 import { startLoop } from "./core/loop";
+import { createGirl } from "./npc/girl";
 import { createCabinCamera } from "./render/cabinCamera";
 import { contextAttributes, createRenderer } from "./render/renderer";
 import { createTestScene } from "./render/test-scene";
-import { createCarriage } from "./train/carriage";
-import {
-	compartments,
-	dividerLeft,
-	innerWall,
-	sill,
-	windowTop,
-} from "./train/layout";
+import { createCompartment } from "./train/compartment";
+import { compartmentSeat, compartmentView } from "./train/compartmentLayout";
 import { createPauseOverlay } from "./ui/pause";
 import { createBirchWorld } from "./world";
 import "./style.css";
@@ -86,19 +81,10 @@ if (context) {
 		const world = createBirchWorld(scene, {
 			...(devParams?.seed !== undefined ? { routeSeed: devParams.seed } : {}),
 		});
-		const [room] = compartments;
-		if (!room) throw new Error("Missing cabin layout.");
-		const windowZ = (room.window.start + room.window.end) / 2;
-		const windowY = (sill + windowTop) / 2;
-		const carriage = createCarriage(0);
-		carriage.render(1);
-		// Reflect around this room's centre so the greybox bunk is on camera-right.
-		carriage.group.scale.z = -1;
-		carriage.group.position.z = 2 * windowZ;
-		scene.add(carriage.group);
+		scene.add(createCompartment(), createGirl(compartmentSeat));
 		const cabin = createCabinCamera(
-			{ x: dividerLeft - 0.05, y: windowY - 0.24, z: windowZ + 0.08 },
-			{ x: -innerWall, y: windowY - 0.21, z: windowZ - 0.19 },
+			compartmentView.eye,
+			compartmentView.focus,
 			VIEW_DISTANCE_M,
 		);
 

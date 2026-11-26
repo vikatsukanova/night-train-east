@@ -3,6 +3,8 @@ import { MathUtils, PerspectiveCamera } from "three";
 type Point = { readonly x: number; readonly y: number; readonly z: number };
 type Look = { readonly yaw: number; readonly pitch: number };
 
+// Keep the overhead racks and the seated figure’s feet in the 16:9 doorway view.
+const VERTICAL_FOV_DEG = 54;
 const CENTRE: Look = { yaw: 0, pitch: 0 };
 const MAX_YAW = MathUtils.degToRad(25);
 const MAX_PITCH = MathUtils.degToRad(12);
@@ -26,7 +28,7 @@ export function dampLook(current: Look, target: Look, dt: number): Look {
 }
 
 export function createCabinCamera(position: Point, focus: Point, far: number) {
-	const camera = new PerspectiveCamera(50, 1, 0.05, far);
+	const camera = new PerspectiveCamera(VERTICAL_FOV_DEG, 1, 0.05, far);
 	camera.position.set(position.x, position.y, position.z);
 	camera.rotation.order = "YXZ";
 	camera.lookAt(focus.x, focus.y, focus.z);
