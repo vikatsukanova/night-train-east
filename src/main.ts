@@ -1,13 +1,26 @@
+import type { Scene } from "three";
 import { RouteClock } from "./core/clock";
 import { startLoop } from "./core/loop";
 import { createGirl } from "./npc/girl";
 import { createCabinCamera } from "./render/cabinCamera";
-import { contextAttributes, createRenderer } from "./render/renderer";
+import {
+	DEFAULT_QUALITY_TIER,
+	getQualityPreset,
+	type QualityTier,
+} from "./render/quality";
+import {
+	contextAttributes,
+	createRenderer,
+	type RendererFrameMetrics,
+} from "./render/renderer";
+import { createSkyDome } from "./render/sky";
 import { createTestScene } from "./render/test-scene";
+import { createTimeOfDayState, evaluateTimeOfDay } from "./render/timeOfDay";
+import { createSnowVolume } from "./render/weather";
 import { createCompartment } from "./train/compartment";
 import { compartmentSeat, compartmentView } from "./train/compartmentLayout";
 import { createPauseOverlay } from "./ui/pause";
-import { createBirchWorld } from "./world";
+import { createBirchWorld, DEFAULT_ROUTE_SEED } from "./world";
 import "./style.css";
 
 declare global {
@@ -16,18 +29,28 @@ declare global {
 	}
 }
 
-// Mirrors src/dev/params.ts. Spelled out here because static imports of dev/
-// are forbidden outside an import.meta.env.DEV guard (ARCHITECTURE §4.1).
+// Mirrors src/dev/params.ts and src/dev/overlay.ts. Spelled out here because static
+// imports of dev/ are forbidden outside an import.meta.env.DEV guard (ARCHITECTURE §4.1).
 type DevParams = {
 	readonly rideT?: number;
 	readonly seed?: number;
 	readonly speedKmh?: number;
+	readonly quality?: QualityTier;
+	readonly noPost?: boolean;
 	readonly hideOverlay: boolean;
+};
+type DevOverlayContext = {
+	readonly clock: RouteClock;
+	readonly scene: Scene;
+	readonly getMetrics: () => RendererFrameMetrics;
+	readonly getVisibleChunks: () => number;
+	readonly getChunkPoolSize: () => number;
+	readonly getSnowQuads: () => number;
 };
 type DevOverlay = {
 	begin(): void;
 	end(): void;
-	update(clock: RouteClock, visibleChunks: number): void;
+	update(): void;
 };
 
 const FIXED_STEP_SEC = 1 / 60;
@@ -58,8 +81,7 @@ if (context) {
 		let attachDevTools:
 			| ((
 					renderer: typeof draw.renderer,
-					clock: RouteClock,
-					getVisibleChunks: () => number,
+					overlayContext: DevOverlayContext,
 					params: DevParams,
 			  ) => DevOverlay)
 			| undefined;
@@ -69,6 +91,14 @@ if (context) {
 			attachDevTools = dev.attachDevTools;
 		}
 
+		const quality = devParams?.quality ?? DEFAULT_QUALITY_TIER;
+		const preset = getQualityPreset(quality);
+		draw.configure({
+			quality,
+			postEnabled: !devParams?.noPost,
+		});
+
+		const routeSeed = devParams?.seed ?? DEFAULT_ROUTE_SEED;
 		const { scene } = createTestScene();
 		const clock = new RouteClock({
 			...(devParams?.rideT !== undefined
@@ -79,9 +109,19 @@ if (context) {
 				: {}),
 		});
 		const world = createBirchWorld(scene, {
-			...(devParams?.seed !== undefined ? { routeSeed: devParams.seed } : {}),
+			routeSeed,
+			maxSceneryDistanceM: preset.maxSceneryDistanceM,
 		});
-		scene.add(createCompartment(), createGirl(compartmentSeat));
+		const sky = createSkyDome(routeSeed);
+		const snow = createSnowVolume({ quality, seed: routeSeed });
+		const todState = createTimeOfDayState();
+
+		scene.add(
+			createCompartment(),
+			createGirl(compartmentSeat),
+			sky.mesh,
+			snow.mesh,
+		);
 		const cabin = createCabinCamera(
 			compartmentView.eye,
 			compartmentView.focus,
@@ -121,12 +161,19 @@ if (context) {
 		window.addEventListener("blur", cabin.release);
 		document.addEventListener("visibilitychange", cabin.release);
 		reducedMotion.addEventListener("change", cabin.release);
+
 		const devOverlay =
 			attachDevTools && devParams
 				? attachDevTools(
 						draw.renderer,
-						clock,
-						() => world.chunks.getVisibleChunkCount(),
+						{
+							clock,
+							scene,
+							getMetrics: () => draw.getMetrics(),
+							getVisibleChunks: () => world.chunks.getVisibleChunkCount(),
+							getChunkPoolSize: () => world.chunks.getChunkPoolSize(),
+							getSnowQuads: () => snow.quadCount,
+						},
 						devParams,
 					)
 				: undefined;
@@ -139,12 +186,30 @@ if (context) {
 			},
 			(alpha) => {
 				const rideT = clock.rideT + (paused ? 0 : alpha * FIXED_STEP_SEC);
-				world.update(clock.distanceAt(rideT));
+				const distanceM = clock.distanceAt(rideT);
+				const continuousHour =
+					clock.startHour +
+					Math.min(rideT, clock.durationSec) * clock.compressionHoursPerSec;
+				const tod = evaluateTimeOfDay(continuousHour, todState);
+
 				cabin.render(paused ? 1 : alpha);
+				world.update(distanceM, tod, cabin.camera);
+				sky.update(tod, cabin.camera.position, rideT);
+				snow.update({
+					cameraPosition: cabin.camera.position,
+					rideT,
+					distanceM,
+					trainSpeedMps: clock.speedKmhAt(rideT) / 3.6,
+					snowColor: tod.snowColor,
+					snowIntensity: tod.snowIntensity,
+					fogDensity: tod.fogDensity,
+				});
+				draw.setExposure(tod.exposure);
+
 				devOverlay?.begin();
 				draw(scene, cabin.camera);
 				devOverlay?.end();
-				devOverlay?.update(clock, world.chunks.getVisibleChunkCount());
+				devOverlay?.update();
 				onFirstFrame?.();
 				onFirstFrame = undefined;
 			},

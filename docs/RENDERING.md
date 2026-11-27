@@ -317,9 +317,9 @@ Exploit the fact that **carriage walls hide 65–80% of the exterior pixels**:
 
 ### 8.5 Profiling & Measurement
 
-- **In-app dev overlay (`?debug=1`, dev builds only):** Integrate **`stats-gl`** (tracks real GPU frame time via `EXT_disjoint_timer_query_webgl2` alongside CPU ms & FPS) plus a compact readout of `renderer.info.render.calls`, `triangles`, `memory.geometries`, and `memory.textures`.
+- **In-app dev overlay (`?debug=1`, dev builds only):** Integrate **`stats-gl`** (tracks real GPU frame time via `EXT_disjoint_timer_query_webgl2` alongside CPU ms & FPS) plus a compact readout of separated scene draw calls (post passes excluded), post draw calls, scene triangles, rolling p50/p95/max frame time, estimated VRAM, chunk pool count, and `memory.geometries` / `memory.textures`.
 - **Deep inspection:** Capture M1/M2/M3 frames in **Spector.js** to verify Early-Z ordering, confirm `pmndrs/postprocessing` pass count (≤ 5 full-screen passes on Medium), and audit accidental redundant state changes.
-- **Automated perf gate (CI / manual checklist):** Fixed camera bookmarks for M1, M2, and M3 plus a 10-minute accelerated treadmill soak test verifying `renderer.info.memory.textures` and `geometries` remain strictly flat (zero leaks).
+- **Automated perf gate (CI / manual checklist):** Fixed camera bookmarks for M1, M2, and M3 plus a 10-minute accelerated treadmill soak test verifying `renderer.info.memory.textures` and `geometries` remain strictly flat (zero leaks). See [`docs/perf/heavy-window-frame.md`](perf/heavy-window-frame.md) for the exact `?moment=M1` target-hardware measurement procedure and results table.
 
 ---
 
