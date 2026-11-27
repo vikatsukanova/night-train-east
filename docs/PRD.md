@@ -104,7 +104,7 @@ from inside one compartment. The defining frame is **M1 at 22:45** (`docs/refere
 - A side-by-side of the in-game frame at `?moment=M1` and `docs/reference/m1-cozy-cabin.jpg` is close in
   **mood and realism**: warm lamp-lit wood, a believable girl in a blanket, a cold moonlit birch forest
   with falling snow outside. The painting sets the target; matching it pixel for pixel isn't required.
-- On target hardware: frame-time p95 < 16.7 ms, and no streaming hitches > 50 ms.
+- On target hardware: frame-time p95 < 16.7 ms, and no streaming hitches > 50 ms. (Measured before release, not at P2: see §6.)
 - CI is green, `main` is always deployable, and every visual PR includes screenshots or a clip.
 
 ## 6. Roadmap
@@ -116,16 +116,16 @@ walkable greybox, birch treadmill). From P2 onward the plan follows the one-room
 |-------|---------|---------------|
 | **P0 Foundations** ✅ | Scaffold, CI, Pages deploy | Done. |
 | **P1 Moving window** ✅ | Greybox kupe car, third-person rig, birch treadmill, `RouteClock`, `stats-gl` | Done. The walking parts are now parked. |
-| **P2 The frame** | Fixed M1 camera with gentle look, a greybox compartment built around that view, the heavy window frame (birch cards, snow, fog, sky, tone map + FXAA) **measured on a real iGPU**, time of day dusk → dawn | `?moment=M1` shows the right composition and colours in greybox at 60 fps on target hardware. |
+| **P2 The frame** | Fixed M1 camera with gentle look, a greybox compartment built around that view, the heavy window frame (birch cards, snow, fog, sky, tone map + FXAA) with perf counters, time of day dusk → dawn | `?moment=M1` shows the right composition and colours in greybox. Perf is signed off with the **Mac mini M4 proxy** (`docs/perf/heavy-window-frame.md`): Medium 1080p p95 ≤ 5.5 ms vsync-off (≈ 3× headroom for a target iGPU) and the 2× pixel stress run under 16.7 ms. The real M1 Air / Iris Xe check moves to the P4 release gate. |
 | **P3 The room and the girl** | Modelled compartment + props in Blender, the first lightmap bake, real materials (wood, brass, fabric, glass), the girl (model, blanket, scarf, idle + sip animation), light probe, audio | The scene reads as M1 with final-ish assets. All R1–R12 pass. |
-| **P4 Realism pass** | Bake tuning, colour grade (LUT), window reflection + frost, room micro-motion, quality tiers, cross-browser pass, should-haves if time allows | Mood comparison and perf budget pass. **MVP release `v0.1.0`.** |
+| **P4 Realism pass** | Bake tuning, colour grade (LUT), window reflection + frost, room micro-motion, quality tiers, cross-browser pass, should-haves if time allows | Mood comparison and perf budget pass, **including 60 fps p95 measured on a real M1 Air or Intel Iris Xe** (borrowed device is fine; deferred from P2, see open question 9). **MVP release `v0.1.0`.** |
 | v0.2+ | Walking + corridor (third-person code already exists), dining car (M2), dawn lake shot (M3), station stop (M4), dialogue | |
 
 **Next three PRs**
 
 1. `feat/fixed-cabin-camera`: a fixed camera at the M1 viewpoint with eased mouse look, `?moment=M1`, walking disabled in the boot flow (code kept).
 2. `feat/compartment-greybox`: rebuild the greybox compartment around the M1 view (window size and height, table, bunks, racks, lamp), plus a greybox seated figure for the girl.
-3. `feat/heavy-window-frame`: night sky, fog, snow and tone mapping through the window, measured on target hardware.
+3. `feat/heavy-window-frame`: night sky, fog, snow and tone mapping through the window, measured on the M4 proxy (target hardware at P4).
 
 ## 7. Open questions
 
@@ -150,3 +150,7 @@ Each question has a proposed default, which we'll use unless someone objects.
    or subsurface pass). Built from a CC0/CC-BY base and re-textured, or modelled in Blender. Open: will the
    owner model her, commission her, or use a base character?
 8. **She is an NPC** ✅ **Decided (owner):** the player is an unseen viewer. She never reacts to the player.
+9. **No target laptop for perf checks?** ✅ **Decided (owner, 2026-11-26):** the owner only has a Mac mini M4.
+   Until P4, perf is checked on the M4 with vsync off plus a 2× pixel stress run (see
+   `docs/perf/heavy-window-frame.md`). Treat it as a headroom estimate, not proof. Before `v0.1.0`, measure on a
+   real M1 MacBook Air or Intel Iris Xe (borrowed is fine). If that fails, the release waits.
