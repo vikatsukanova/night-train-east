@@ -8,6 +8,8 @@
 
 ## 0. One-Room MVP Overrides (read this first)
 
+> Realism research (what makes three.js look photoreal, and proposed changes to this plan): [`REALISM.md`](REALISM.md).
+
 The MVP is one kupe compartment seen from a fixed camera, with one seated NPC (the girl) and the
 landscape passing the window. Because the camera barely moves and the room is tiny, we spend far more
 per pixel than the full-train plan allowed. Where this section and the rest of the doc disagree, **this
