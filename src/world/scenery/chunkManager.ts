@@ -25,11 +25,13 @@ import {
 	activeChunkIndices,
 	CHUNK_LENGTH_M,
 	chunkIndexAtDistance,
+	chunkMinViewDepth,
 	chunkRingSlot,
 	chunkStartDistanceM,
 	chunkWorldZ,
 	isChunkVisibleInFog,
 	RING_SIZE,
+	type ViewRay,
 } from "./chunkMath";
 import {
 	createBirchBarkTexture,
@@ -57,7 +59,7 @@ export class TreadmillChunkManager {
 	readonly root = new Group();
 	private readonly instancedGroup = new Group();
 	private readonly routeSeed: number;
-	private readonly fogCutoffM: number;
+	private fogCutoffM: number;
 
 	// Pooled terrain meshes sharing one BufferGeometry and one Material.
 	private readonly terrainMeshes: Mesh[] = [];
@@ -230,7 +232,20 @@ export class TreadmillChunkManager {
 		if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
 	}
 
-	update(distanceM: number): void {
+	/**
+	 * @param fogCutoffM view depth at which fog reaches ~98% opacity.
+	 * @param trackCapM quality-tier cap on distance along the track (independent of fog).
+	 * @param view camera position + forward; without it the fog cut falls back to track distance.
+	 */
+	update(
+		distanceM: number,
+		fogCutoffM?: number,
+		trackCapM: number = Number.POSITIVE_INFINITY,
+		view?: ViewRay,
+	): void {
+		if (fogCutoffM !== undefined && Number.isFinite(fogCutoffM)) {
+			this.fogCutoffM = fogCutoffM;
+		}
 		const needsRebase =
 			!this.initialized ||
 			Math.abs(distanceM - this.anchorM) >= REBASE_DISTANCE_M;
@@ -248,11 +263,15 @@ export class TreadmillChunkManager {
 		for (let i = 0; i < RING_SIZE; i++) {
 			const chunkIndex = chunks[i] ?? 0;
 			const slot = chunkRingSlot(chunkIndex);
-			const visible = isChunkVisibleInFog(
+			const withinTrackCap = isChunkVisibleInFog(
 				chunkIndex,
 				distanceM,
-				this.fogCutoffM,
+				trackCapM,
 			);
+			const withinFog = view
+				? chunkMinViewDepth(chunkIndex, distanceM, view) <= this.fogCutoffM
+				: isChunkVisibleInFog(chunkIndex, distanceM, this.fogCutoffM);
+			const visible = withinTrackCap && withinFog;
 
 			const terrain = this.terrainMeshes[slot];
 			if (terrain) {
@@ -450,6 +469,10 @@ export class TreadmillChunkManager {
 
 	getVisibleChunkCount(): number {
 		return this.visibleChunks;
+	}
+
+	getChunkPoolSize(): number {
+		return RING_SIZE;
 	}
 
 	dispose(): void {

@@ -60,3 +60,39 @@ export function isChunkVisibleInFog(
 	const nearestAbsZ = zMax < 0 ? -zMax : Math.max(zMin, 0);
 	return nearestAbsZ <= fogCutoffM;
 }
+
+/** Conservative lateral / vertical extent of everything a chunk submits (terrain, trees, poles). */
+export const CHUNK_BOUNDS_HALF_WIDTH_M = 160;
+export const CHUNK_BOUNDS_MIN_Y_M = -10;
+export const CHUNK_BOUNDS_MAX_Y_M = 40;
+
+export interface ViewRay {
+	readonly px: number;
+	readonly py: number;
+	readonly pz: number;
+	/** Unit camera forward vector in world space. */
+	readonly fx: number;
+	readonly fy: number;
+	readonly fz: number;
+}
+
+/**
+ * Minimum camera-space depth (distance along the view direction) of the chunk's bounding box.
+ * `FogExp2` fades by this view depth, not by track distance, so the 98% fog cut must compare
+ * against it. Depth is linear, so the minimum over the box is reached at one of its 8 corners.
+ */
+export function chunkMinViewDepth(
+	chunkIndex: number,
+	distanceM: number,
+	view: ViewRay,
+): number {
+	const zMax = chunkWorldZ(chunkIndex, distanceM);
+	const zMin = zMax - CHUNK_LENGTH_M;
+	const dx =
+		view.fx >= 0 ? -CHUNK_BOUNDS_HALF_WIDTH_M : CHUNK_BOUNDS_HALF_WIDTH_M;
+	const y = view.fy >= 0 ? CHUNK_BOUNDS_MIN_Y_M : CHUNK_BOUNDS_MAX_Y_M;
+	const z = view.fz >= 0 ? zMin : zMax;
+	return (
+		(dx - view.px) * view.fx + (y - view.py) * view.fy + (z - view.pz) * view.fz
+	);
+}

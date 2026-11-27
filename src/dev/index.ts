@@ -1,13 +1,13 @@
 import type { WebGLRenderer } from "three";
-import type { RouteClock } from "../core/clock";
 import {
 	createDevOverlay,
 	type DevOverlay,
+	type DevOverlayContext,
 	type DevStatsSnapshot,
 } from "./overlay";
 import { type DevParams, parseDevParams } from "./params";
 
-export type { DevOverlay, DevParams, DevStatsSnapshot };
+export type { DevOverlay, DevOverlayContext, DevParams, DevStatsSnapshot };
 
 export function readDevParams(): DevParams {
 	return parseDevParams(window.location.search);
@@ -15,16 +15,17 @@ export function readDevParams(): DevParams {
 
 export function attachDevTools(
 	renderer: WebGLRenderer,
-	clock: RouteClock,
-	getVisibleChunks: () => number,
+	context: DevOverlayContext,
 	params: DevParams,
 ): DevOverlay {
-	const overlay = createDevOverlay(renderer, params.hideOverlay);
+	const overlay = createDevOverlay(renderer, context, params.hideOverlay);
 	const handle = window.__NTE__ as typeof window.__NTE__ & {
 		stats?: () => DevStatsSnapshot;
+		resetFrameStats?: () => void;
 		setRideT?: (seconds: number) => void;
 	};
-	handle.stats = () => overlay.snapshot(clock, getVisibleChunks());
-	handle.setRideT = (seconds: number) => clock.setRideT(seconds);
+	handle.stats = () => overlay.snapshot();
+	handle.resetFrameStats = () => overlay.resetFrameStats();
+	handle.setRideT = (seconds: number) => context.clock.setRideT(seconds);
 	return overlay;
 }

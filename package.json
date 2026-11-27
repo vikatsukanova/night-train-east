@@ -19,6 +19,7 @@
 		"verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm size"
 	},
 	"dependencies": {
+		"postprocessing": "^6.39.6",
 		"three": "0.187.0"
 	},
 	"devDependencies": {
